@@ -30,7 +30,6 @@
         acc(coordInstance.coords);
       },
       (error) => {
-        console.log(error)
         rej(
           `${
             error.code == 1
@@ -103,6 +102,14 @@
     times = times.data.timings;
 
     const currentTime = new Date().getTime();
+    /* changing time for testing purpose */
+
+    // const currentTime = new Date();
+    // currentTime.setHours(1);
+    // currentTime.setDate(20)
+    // currentTime.setMinutes(10);
+    // console.log(currentTime);
+
     const fajr = compareableTime(times.Fajr);
     const dhuhr = compareableTime(times.Dhuhr);
     const asr = compareableTime(times.Asr);
@@ -110,13 +117,13 @@
     const isha = compareableTime(times.Isha);
     const sunRise = compareableTime(times.Sunrise);
     const sunSet = compareableTime(times.Sunset);
-    const imsak = compareableTime(times.Imsak);
+    let nextImsak = await getNextImsak();
 
     const isFajrTime = currentTime > fajr && currentTime < sunRise;
     const isDhuhrTime = currentTime > dhuhr && currentTime < asr;
     const isAsrTime = currentTime > asr && currentTime < sunSet;
     const isMaghribTime = currentTime > maghrib && currentTime < isha;
-    const isIshaTime = currentTime > isha && currentTime < imsak;
+    const isIshaTime = currentTime > isha && currentTime < nextImsak;
 
     return isFajrTime
       ? "Fajr"
@@ -130,8 +137,32 @@
       ? "Isha"
       : false;
   }
-  function compareableTime(hh_mm) {
-    const currentTime = new Date();
+  async function getNextImsak() {
+    const coords = await GET_COORDS;
+    const date = new Date();
+    const nextDay = new Date();
+    nextDay.setDate(date.getDate() + 1);
+    const API = `https://api.aladhan.com/v1/timings/${nextDay.getDate()}-${
+      nextDay.getMonth() + 1
+    }-${nextDay.getFullYear()}?method=4`;
+    const url = `${API}&latitude=${coords.latitude}&longitude=${coords.longitude}`;
+    const RESPONSE = await fetch(url);
+    if (!RESPONSE.ok) {
+      alert(
+        "Failed to fetch PrayerTime data from remote server! Check your internet connection and try again."
+      );
+      return Promise.reject(
+        "Failed to fetch PrayerTime data from remote server! Check your internet connection and try again."
+      );
+    }
+    const data = await RESPONSE.json();
+    const rturnable = compareableTime(data.data.timings.Imsak, nextDay);
+    return rturnable;
+  }
+  function compareableTime(hh_mm, currentTime) {
+    if (!currentTime) {
+      currentTime = new Date();
+    }
     const input_time = new Date(
       currentTime.getFullYear(),
       currentTime.getMonth(),
